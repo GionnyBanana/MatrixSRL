@@ -40,6 +40,7 @@
 #include "main.h"
 #include "stm32f4xx_hal.h"
 #include "adc.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -53,7 +54,13 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint32_t tempReading = 0;
-uint32_t timestamp = 0;
+RTC_DateTypeDef date;
+RTC_TimeTypeDef time;
+HAL_RTCStateTypeDef state;
+float value = 0;
+char message[40] = {0};
+uint8_t flag = 0;
+uint16_t decimal = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,7 +68,9 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+void PrintValues(float value, char message[40]);
+void GetTemperature(float vin, ADC_HandleTypeDef* hadc);
+void GetTimeAndDate(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -100,6 +109,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_ADC_Start_IT(&hadc1);
@@ -109,6 +119,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  GetTimeAndDate();
 
   /* USER CODE END WHILE */
 
@@ -128,6 +139,7 @@ void SystemClock_Config(void)
 
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
     /**Configure the main internal regulator output voltage 
     */
@@ -137,8 +149,9 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -171,6 +184,13 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
     /**Configure the Systick interrupt time 
     */
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
@@ -184,33 +204,31 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void GetTimeAndDate(void) {
+	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
+	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+	if (flag == 1) {
+		PrintValues(value, message);
+		flag =0;
+	}
+}
+
+void GetTemperature(float vin, ADC_HandleTypeDef* hadc) {
+	tempReading = HAL_ADC_GetValue(hadc);
+	vin = ((float)tempReading/4095.0)*VREF;
+	value = (((float)vin - V25)/SLOPE) + 25.0;
+}
+
 void PrintValues(float value, char message[40]) {
-	uint32_t decimal = timestamp%2*5;
-	uint32_t sec = timestamp/2;
-	uint32_t min = sec/60;
-	uint32_t hour = sec/3600;
-	if (sec >= 60) {
-		sec = 0;
-	}
-	if (min >= 60) {
-			min = 0;
-	}
-	if (hour >= 24) {
-				hour = 0;
-	}
-	sprintf(message, "T = %u C - %02lu:%02lu:%02lu.%lu 26th May 2018 \n\r", (int)value, hour, min, sec, decimal);
+	sprintf(message, "T = %u C - %02d:%02d:%02d.%u - %02u %02u %02u \n\r", (int)value, time.Hours, time.Minutes, time.Seconds, decimal%2*5, date.Date, date.Month, date.Year);
 	HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), 100);
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	float vin = 0;
-	float value = 0;
-	char message[40] = {0};
-	tempReading = HAL_ADC_GetValue(hadc);
-	vin = ((float)tempReading/4095.0)*VREF;
-	value = (((float)vin - V25)/SLOPE) + 25.0;
-	PrintValues(value, message);
+	GetTemperature(vin, hadc);
 }
+
 /* USER CODE END 4 */
 
 /**

@@ -1,5 +1,7 @@
-main.c:126:6:SystemClock_Config	96	static
-main.c:76:5:main	8	static
-main.c:187:6:PrintValues	32	static
-main.c:205:6:HAL_ADC_ConvCpltCallback	48	static
-main.c:222:6:_Error_Handler	0	static
+main.c:137:6:SystemClock_Config	144	static
+main.c:216:6:GetTemperature	8	static
+main.c:222:6:PrintValues	40	static
+main.c:207:6:GetTimeAndDate	8	static
+main.c:85:5:main	8	static
+main.c:227:6:HAL_ADC_ConvCpltCallback	0	static
+main.c:240:6:_Error_Handler	0	static

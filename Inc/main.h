@@ -47,6 +47,8 @@
 #include <stdio.h>
 #include "string.h"
 #include <math.h>
+extern uint8_t flag;
+extern uint16_t decimal;
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
@@ -62,8 +64,6 @@
 #define VREF 3.0
 #define V25 0.76
 #define SLOPE 0.0025
-
-extern uint32_t timestamp;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
