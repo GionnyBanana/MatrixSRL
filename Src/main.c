@@ -1,38 +1,14 @@
 
+
 /**
   ******************************************************************************
   * @file           : main.c
   * @brief          : Main program body
-  ******************************************************************************
-  ** This notice applies to any and all portions of this file
-  * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether 
-  * inserted by the user or by software development tools
-  * are owned by their respective copyright owners.
-  *
-  * COPYRIGHT(c) 2018 STMicroelectronics
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * ingroup 		: template
+  * version 		: 1.0.0
+  * date    		: 31/05/2018
+  * author  		: Giovanni Caiazzo , Olawale Luqman Ajani, Luca Signorelli
+  * defgroup 		: Matrix_Temperature
   *
   ******************************************************************************
   */
@@ -53,13 +29,19 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+/* **************** */
+/* Global variables */
+/* **************** */
+/* The initial value given by the ADC before processing */
 uint32_t tempReading = 0;
+/* Timestamp of the sample, date has day, month and year; time has hours, minutes and seconds*/
 RTC_DateTypeDef date;
 RTC_TimeTypeDef time;
-HAL_RTCStateTypeDef state;
+/* value is the final value of the temperature after processing */
 float value = 0;
-char message[40] = {0};
-uint8_t flag = 0;
+/* message is the line given to the user through the UART with temperature and timestamp */
+char message[35] = {0};
+/* Decimal point in the timestamp for the fraction of the second */
 uint16_t decimal = 0;
 /* USER CODE END PV */
 
@@ -119,6 +101,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  /*! We call this function in the while because, in order for the RTC clock to work properly, it must be called continuously, as often as possible.*/
 	  GetTimeAndDate();
 
   /* USER CODE END WHILE */
@@ -204,28 +187,79 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* ************** */
+/* Local Function */
+/* ************** */
+/*!
+ brief: 	Gets the time and date from the RTC clock and calls the
+ 	 	 	 printValues function which prints the message in UART
+ 	 	 	 with temperature and timestamp*/
+/*!file:		main.c*/
+/*!param:  	None.*/
+/*!retval: 	None*/
+
 void GetTimeAndDate(void) {
+	/*! Gets the date from the RTC*/
 	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
+	/*! Gets the time from the RTC*/
 	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
-	if (flag == 1) {
-		PrintValues(value, message);
-		flag =0;
-	}
+	/*! Print everything through UART in the terminal*/
+	PrintValues(value, message);
 }
 
+/* ************** */
+/* Local Function */
+/* ************** */
+/*!
+ brief: 	Gets the temperature from the ADC and process it
+ 	 	 	 in order to have the final value.*/
+/*!file:		main.c*/
+/*!param:  	None.*/
+/*!retval: 	None*/
+
 void GetTemperature(float vin, ADC_HandleTypeDef* hadc) {
+	/*! Get the value from the ADC */
 	tempReading = HAL_ADC_GetValue(hadc);
+	/*! Conversion of value to volts in float  */
 	vin = ((float)tempReading/4095.0)*VREF;
+	/*! Conversion of value to temperature degrees centigrade in float  */
 	value = (((float)vin - V25)/SLOPE) + 25.0;
 }
 
+/* ************** */
+/* Local Function */
+/* ************** */
+/*!
+  * @brief 	Print a value of the temperature and its timestamp
+  * @file	main.c
+  * @param  value:		the value of the temperature in degrees Celsius
+  * @param  message:	the message printed on the console with temperature and timestamp
+  * @retval None
+  */
+
+
 void PrintValues(float value, char message[40]) {
+	/*! Put the value of the temperature with timestamp into the message variable */
 	sprintf(message, "T = %u C - %02d:%02d:%02d.%u - %02u %02u %02u \n\r", (int)value, time.Hours, time.Minutes, time.Seconds, decimal%2*5, date.Date, date.Month, date.Year);
+	/*! Transmit the value of the temperature with timestamp to the console through the UART peripheral*/
 	HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), 100);
 }
 
+/* ************** */
+/* Local Function */
+/* ************** */
+/*!
+ brief: 	Regular conversion complete callback in non blocking mode.
+ 			Definition of the HAL_ADC_ConvCpltCallback function.
+			This function is called when the ADC has finished converting*/
+/*!file:		Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_adc.c*/
+/*!param:  	hadc pointer to a ADC_HandleTypeDef structure that contains
+         	the configuration information for the specified ADC.*/
+/*!retval: 	None*/
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	float vin = 0;
+	/*! Every time the ADC is ready we call GetTemperature to process the ADC data and have the temperature*/
 	GetTemperature(vin, hadc);
 }
 
