@@ -187,6 +187,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 /* ************** */
 /* Local Function */
 /* ************** */
@@ -199,11 +200,11 @@ void SystemClock_Config(void)
 /*!retval: 	None*/
 
 void GetTimeAndDate(void) {
-	/*! Gets the date from the RTC*/
+	/*! Gets the date from the RTC "HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN)"*/
 	HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
-	/*! Gets the time from the RTC*/
+	/*! Gets the time from the RTC "HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN)"*/
 	HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
-	/*! Print everything through UART in the terminal*/
+	/*! Print everything through UART in the terminal "PrintValues(value, message)"*/
 	PrintValues(value, message);
 }
 
@@ -218,11 +219,11 @@ void GetTimeAndDate(void) {
 /*!retval: 	None*/
 
 void GetTemperature(float vin, ADC_HandleTypeDef* hadc) {
-	/*! Get the value from the ADC */
+	/*! Get the value from the ADC "tempReading = HAL_ADC_GetValue(hadc)"*/
 	tempReading = HAL_ADC_GetValue(hadc);
-	/*! Conversion of value to volts in float  */
+	/*! Conversion of value to volts in float "vin = ((float)tempReading/4095.0)*VREF" */
 	vin = ((float)tempReading/4095.0)*VREF;
-	/*! Conversion of value to temperature degrees centigrade in float  */
+	/*! Conversion of value to temperature degrees centigrade in float "value = (((float)vin - V25)/SLOPE) + 25.0" */
 	value = (((float)vin - V25)/SLOPE) + 25.0;
 }
 
@@ -239,9 +240,9 @@ void GetTemperature(float vin, ADC_HandleTypeDef* hadc) {
 
 
 void PrintValues(float value, char message[40]) {
-	/*! Put the value of the temperature with timestamp into the message variable */
+	/*! Put the value of the temperature with timestamp into the message variable "sprintf(message, "T = %u C - %02d:%02d:%02d.%u - %02u %02u %02u \n\r", (int)value, time.Hours, time.Minutes, time.Seconds, decimal%2*5, date.Date, date.Month, date.Year)"*/
 	sprintf(message, "T = %u C - %02d:%02d:%02d.%u - %02u %02u %02u \n\r", (int)value, time.Hours, time.Minutes, time.Seconds, decimal%2*5, date.Date, date.Month, date.Year);
-	/*! Transmit the value of the temperature with timestamp to the console through the UART peripheral*/
+	/*! Transmit the value of the temperature with timestamp to the console through the UART peripheral "HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), 100)" */
 	HAL_UART_Transmit(&huart1, (uint8_t*)message, strlen(message), 100);
 }
 
@@ -259,7 +260,7 @@ void PrintValues(float value, char message[40]) {
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 	float vin = 0;
-	/*! Every time the ADC is ready we call GetTemperature to process the ADC data and have the temperature*/
+	/*! Every time the ADC is ready we call GetTemperature to process the ADC data and have the temperature "GetTemperature(vin, hadc)"*/
 	GetTemperature(vin, hadc);
 }
 
