@@ -64,6 +64,7 @@ extern uint16_t decimal;
 #define VREF 3.0
 #define V25 0.76
 #define SLOPE 0.0025
+extern uint8_t flag;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
